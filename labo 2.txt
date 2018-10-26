@@ -1,0 +1,6 @@
+methode:
+saliency
+doel: 
+croppen en scalen
+vloeiende overgang tussen frames
+saliency over tijd ealueren & combineren
