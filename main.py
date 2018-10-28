@@ -1,7 +1,7 @@
 from videocontroller import VideoController
+
 import sys
 
-videoController = VideoController(sys.argv)
-videoController.calculate_for_all()
-
-
+a = VideoController(sys.argv)
+a.calculate_for_all()
+a.finish()

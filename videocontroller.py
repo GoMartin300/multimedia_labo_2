@@ -37,7 +37,7 @@ class VideoController(object):
         count = 0
         for picture in os.listdir(self.orgtempdir):
             saliencymap = getSaliency(picture)
-            cv2.imwrite(os.path.join(self.saltempdir.name,saliencymap,str(count) + '.jpg'))
+            cv2.imwrite(os.path.join(self.saltempdir.name, saliencymap, str(count) + '.jpg'))
             count += 1
 
     def calculate_binary(self, saliency_image):
@@ -142,7 +142,7 @@ class VideoController(object):
             frame = self.calculate_binary(frame)
             big_video.addframe(frame)
             cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
-            region = self.blob_analysis(self,frame)
+            region = self.blob_analysis(self, frame)
             # region = self.find_region(frame)
             small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
             count += 1

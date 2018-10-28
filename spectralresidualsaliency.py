@@ -52,9 +52,9 @@ def getSaliency(img):
     return sm
 # test function
 
-image = cv2.imread(str(sys.argv[1]), 0)
-image = getSaliency(image)
-cv2.imshow('dd', image)
-while True:
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+# image = cv2.imread(str(sys.argv[1]), 0)
+# image = getSaliency(image)
+# cv2.imshow('dd', image)
+# while True:
+#     if cv2.waitKey(1) & 0xFF == ord('q'):
+#         break
