@@ -71,6 +71,66 @@ class VideoController(object):
                 max_region_number = region_number
         return region_list[max_region_number]
 
+    def blob_analysis(self, sal_frame): # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+        # set up the detector
+        detector = cv2.SimpleBlobDetector()
+        # detect blobs
+        keypoints = detector.detect(sal_frame)
+
+        # test function
+        # draw blobs as circles
+        im_with_keypoints = cv2.drawKeypoints(sal_frame, keypoints, np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("keyPoints", im_with_keypoints)
+        cv2.waitKey(0)
+        return get_region_blob(keypoints)
+
+
+    def get_region_blob(self, keypoints):
+        im = cv2.drawKeypoints(keypoints,np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        keypLeft = int
+        keypRight = int
+        keypTop = int
+        keypBottom = int
+
+        #get most left,right,top,bottom pixel
+        leftFound = False
+        for x in range(0,len(im[0])):
+            for y in range(0, len(im)):
+                if im.item(y, x, 2)==255:
+                    keypLeft = x
+                    leftFound = True
+                    break
+            if leftFound:
+                break
+        rightFound = False
+        for x in range(len(im[0]), 0):
+            for y in range(0, len(im)):
+                if im.item(y, x, 2)==255:
+                    keypRight = x
+                    rightFound = True
+                    break
+            if rightFound:
+                break
+        topFound = False
+        for y in range(len(im), 0):
+            for x in range(0, len(im[0])):
+                if im.item(y, x, 2)==255:
+                    keypTop = y
+                    topFound = True
+                    break
+            if topFound:
+                break
+        bottomFound = False
+        for y in range(0,len(im)):
+            for x in range(0, len(im[0])):
+                if im.item(y, x, 2)==255:
+                    keypBottom = y
+                    bottomFound = True
+                    break
+            if bottomFound:
+                break
+        return Region(keypLeft,keypBottom,keypRight,keypTop)
 
     def calculate_for_all(self):
         count = 0
@@ -82,8 +142,8 @@ class VideoController(object):
             frame = self.calculate_binary(frame)
             big_video.addframe(frame)
             cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
-            blob_analysis(self,frame)
-            region = self.find_region(frame)
+            region = self.blob_analysis(self,frame)
+            # region = self.find_region(frame)
             small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
             count += 1
         big_video.finish()
@@ -103,68 +163,9 @@ class VideoController(object):
         self.cap.release()
 
 
-    def blob_analysis(self, sal_frame): # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
-        # set up the detector
-        detector = cv2.SimpleBlobDetector()
-        # detect blobs
-        keypoints = detector.detect(sal_frame)
-
-        # test function
-        # draw blobs as circles
-        im_with_keypoints = cv2.drawKeypoints(sal_frame, keypoints, np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow("keyPoints", im_with_keypoints)
-        cv2.waitKey(0)
-        return get_region_blob(keypoints)
 
 
-    def get_region_blob(self,keypoints):
-        im = cv2.drawKeypoints(keypoints,np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-        keypLeft = int
-        keypRight = int
-        keypTop = int
-        keypBottom = int
-
-        #get most left,right,top,bottom pixel
-        leftFound = False
-        for x in range(0,len(im[0])):
-            for y in range(0,len(im)):
-                if im.item(y,x,2)==255:
-                    keypLeft = x
-                    leftFound = True
-                    break
-            if leftFound:
-                break
-        rightFound = False
-        for x in range(len(im[0]),0):
-            for y in range(0,len(im)):
-                if im.item(y,x,2)==255:
-                    keypRight = x
-                    rightFound = True
-                    break
-            if rightFound:
-                break
-        topFound = False
-        for y in range(len(im),0):
-            for x in range(0,len(im[0])):
-                if im.item(y,x,2)==255:
-                    keypTop = y
-                    topFound = True
-                    break
-            if topFound:
-                break
-        bottomFound = False
-        for y in range(0,len(im)):
-            for x in range(0,len(im[0])):
-                if im.item(y,x,2)==255:
-                    keypBottom = y
-                    bottomFound = True
-                    break
-            if bottomFound:
-                break
-        return Region(keypLeft,keypBottom,keypRight,keypTop)
-
-
-    def prefered_region(self):
+    # def prefered_region(self):
 
         # When you crop the image to a preferred width & height
