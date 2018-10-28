@@ -82,6 +82,7 @@ class VideoController(object):
             frame = self.calculate_binary(frame)
             big_video.addframe(frame)
             cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
+            blob_analysis(self,frame)
             region = self.find_region(frame)
             small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
             count += 1
@@ -102,8 +103,20 @@ class VideoController(object):
         self.cap.release()
 
 
-    def blob_analysis(self):
+    def blob_analysis(self, sal_frame): # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+        # set up the detector
+        detector = cv2.SimpleBlobDetector()
+        # detect blobs
+        keypoints = detector.detect(sal_frame)
 
+        # test function
+        # draw blobs as circles
+        im_with_keypoints = cv2.drawKeypoints(sal_frame, keypoints, np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("keyPoints", im_with_keypoints)
+        cv2.waitKey(0)
 
+    def get_region(self):
 
+    def prefered_region(self):
 
+        # When you crop the image to a preferred width & height
