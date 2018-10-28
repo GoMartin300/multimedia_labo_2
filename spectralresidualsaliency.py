@@ -1,7 +1,7 @@
 # https://www.mathworks.com/matlabcentral/mlc-downloads/downloads/submissions/38512/versions/1/previews/CLE/saltool/SpectralR/SpectralResidualSaliency.m/index.html?access_key=
 import sys
 import cv2
-import convolutions
+import multimedia_labo_2.convolutions
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -50,6 +50,7 @@ def getSaliency(img):
     #
     # cv2.destroyAllWindows()
     return sm
+<<<<<<< HEAD
 # test function
 
 # image = cv2.imread(str(sys.argv[1]), 0)
@@ -58,3 +59,6 @@ def getSaliency(img):
 # while True:
 #     if cv2.waitKey(1) & 0xFF == ord('q'):
 #         break
+=======
+# test function
+>>>>>>> a367186ec5b3436ca82d504b5ef224698cb13b1a

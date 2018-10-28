@@ -71,22 +71,8 @@ class VideoController(object):
                 max_region_number = region_number
         return region_list[max_region_number]
 
-    def blob_analysis(self, sal_frame): # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
-        # set up the detector
-        detector = cv2.SimpleBlobDetector()
-        # detect blobs
-        keypoints = detector.detect(sal_frame)
-
-        # test function
-        # draw blobs as circles
-        im_with_keypoints = cv2.drawKeypoints(sal_frame, keypoints, np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow("keyPoints", im_with_keypoints)
-        cv2.waitKey(0)
-        return get_region_blob(keypoints)
-
-
-    def get_region_blob(self, keypoints):
-        im = cv2.drawKeypoints(keypoints,np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    def get_region_blob(self,keypoints):
+        im = cv2.drawKeypoints(keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
         keypLeft = int
         keypRight = int
@@ -132,22 +118,35 @@ class VideoController(object):
                 break
         return Region(keypLeft,keypBottom,keypRight,keypTop)
 
+    def blob_analysis(self, sal_frame): # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+        # set up the detector
+        detector = cv2.SimpleBlobDetector()
+        # detect blobs
+        keypoints = detector.detect(sal_frame)
+
+        # test function
+        # draw blobs as circles
+        im_with_keypoints = cv2.drawKeypoints(sal_frame, keypoints, np.array([]),(0,0,255),cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("keyPoints", im_with_keypoints)
+        cv2.waitKey(0)
+        return self.get_region_blob(keypoints)
+
     def calculate_for_all(self):
         count = 0
         a = os.getcwd()
-        big_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'big', 1080, 1920)
-        small_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'small', self.targetheight, self.targetwidth)
+        # big_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'big', 1080, 1920)
+        # small_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'small', self.targetheight, self.targetwidth)
         for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
             frame = cv2.imread(os.path.join(self.orgtempdir.name, str(count) + '.jpg'), 0)
             frame = self.calculate_binary(frame)
-            big_video.addframe(frame)
+            # big_video.addframe(frame)
             cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
-            region = self.blob_analysis(self, frame)
-            # region = self.find_region(frame)
-            small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
+            self.blob_analysis(self, frame)
+            region = self.find_region(frame)
+            # small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
             count += 1
-        big_video.finish()
-        small_video.finish()
+        # big_video.finish()
+        # small_video.finish()
 
         # videowriter =
         # for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
@@ -162,10 +161,5 @@ class VideoController(object):
     def finish(self):
         self.cap.release()
 
-
-
-
-
     # def prefered_region(self):
-
         # When you crop the image to a preferred width & height
