@@ -141,7 +141,7 @@ class VideoController(object):
             frame = self.calculate_binary(frame)
             # big_video.addframe(frame)
             cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
-            self.blob_analysis(self, frame)
+            self.blob_analysis(frame)
             region = self.find_region(frame)
             # small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
             count += 1
