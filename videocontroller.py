@@ -59,11 +59,19 @@ class VideoController(object):
                 B = summed_area_matrix[h][w + self.targetwidth]
                 C = summed_area_matrix[h + self.targetheight][w]
                 D = summed_area_matrix[h + self.targetheight][w + self.targetwidth]
-                value = D + A
-                value = value - B - C
+                value = D - B + A - C
                 if best_value > value:
+                    best_value = value
                     best_region = Region(h1=h, h2=h + self.targetheight, w1=w, w2=w + self.targetwidth)
         return best_region
+
+    """
+    calculates the final frame that needs to be displayed, this means it makes sure the tranisition is smooth
+    """
+    def calculate_next_frame(self, target_region, last_region):
+        if last_region is None:
+            return target_region
+        else:
 
     # def get_region_blob(self,keypoints):
     #     im = cv2.drawKeypoints(keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -130,15 +138,18 @@ class VideoController(object):
         a = os.getcwd()
         # big_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'big', 1080, 1920)
         # small_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'small', self.targetheight, self.targetwidth)
+        last_region = None
         for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
             frame = cv2.imread(os.path.join(self.orgtempdir.name, str(count) + '.jpg'), 0)
             frame = self.calculate_threshold(frame)
-            frame = self.find_most_salient_region(frame)
+            target_region = self.find_most_salient_region(frame)
+            final_frame = self.calculate_next_frame(target_region, last_region)
             # big_video.addframe(frame)
             # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.jpg'), frame)
             # self.blob_analysis(frame)
             # region = self.find_most_salient_region(frame)
             # small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
+            last_region = target_region
             count += 1
         # big_video.finish()
         # small_video.finish()
