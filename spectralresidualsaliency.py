@@ -22,7 +22,7 @@ def getSaliency(img):
     width=img.shape[0]
     height=img.shape[1]
 
-    img = cv2.resize(img, (64, 64))
+    img = cv2.resize(img, (128, 128))
     # cv2.imshow("img", img)
 
     kernl = kernel(9)
@@ -31,15 +31,15 @@ def getSaliency(img):
     logamp = np.log(np.abs(f))
     phase = np.angle(f)
 
-    sr = logamp -  cv2.filter2D(logamp,-1,kernl)
+    sr = logamp - cv2.filter2D(logamp, -1, kernl)
     # showPlot(sr)
     # print(np.abs(np.fft.ifft2(np.exp(sr + 1j*phase))))
     sm = np.abs(np.fft.ifft2(np.exp(sr + 1j*phase)))**2
 
     msm = np.max(sm)
     sm = np.asarray(sm*255/msm, dtype=np.uint8)
-    cv2.filter2D(sm,-1,kernl)
-    sm = cv2.resize(sm, (height, width))
+    cv2.filter2D(sm, -1, kernl)
+    # sm = cv2.resize(sm, (height, width))
     # img = cv2.resize(img, (height, width))
     # img = np.concatenate((img, sm), axis=1)
     # cv2.imshow("sm", np.concatenate((img, sm), axis=1))
