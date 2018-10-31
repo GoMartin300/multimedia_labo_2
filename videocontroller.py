@@ -8,8 +8,10 @@ from spectralresidualsaliency import getSaliency
 
 
 class VideoController(object):
-    MOVE_HORIZONTAL_BETWEEN_FRAMES = 1
-    MOVE_VERTICAL_BETWEEN_FRAMES = 1
+    MINIMAL_HORIZONTAL_DIFFERENCE_FOR_MOVEMENT = 30
+    MINIMAL_VERTICAL_DIFFERENCE_FOR_MOVEMENT = 30
+    MOVE_HORIZONTAL_BETWEEN_FRAMES = 5
+    MOVE_VERTICAL_BETWEEN_FRAMES = 3
 
     original_video_path = None
     cap = None
@@ -19,8 +21,8 @@ class VideoController(object):
     last_region = None
 
     def __init__(self, sys_argv):
-        self.targetheight = int(sys_argv[3])
-        self.targetwidth = int(sys_argv[2])
+        self.targetheight = int(sys_argv[2])
+        self.targetwidth = int(sys_argv[3])
 
         self.original_video_path = str(sys_argv[1])
         self.cap = cv2.VideoCapture(self.original_video_path)
@@ -67,10 +69,9 @@ class VideoController(object):
                 if best_value < value:
                     best_value = value
                     best_region = Region(h1=h, h2=h + scaled_targetheight, w1=w, w2=w + scaled_targetwidth)
-        try:
-            h1 = round(best_region.h1 * scaling_factor_h)
-        except UnboundLocalError:
-            a = 2+2
+        if best_value is 0:
+            return self.last_region
+        h1 = round(best_region.h1 * scaling_factor_h)
         w1 = round(best_region.w1 * scaling_factor_w)
         if h1 < 0:
             h1 = 0
@@ -97,16 +98,16 @@ class VideoController(object):
             return target_region
 
         temp = target_region.h1 - last_region.h1
-        if temp > self.MOVE_VERTICAL_BETWEEN_FRAMES:
+        if temp > self.MINIMAL_VERTICAL_DIFFERENCE_FOR_MOVEMENT:
             h1 = last_region.h1 + self.MOVE_VERTICAL_BETWEEN_FRAMES
-        elif abs(temp) > self.MOVE_VERTICAL_BETWEEN_FRAMES:
+        elif abs(temp) > self.MINIMAL_VERTICAL_DIFFERENCE_FOR_MOVEMENT:
             h1 = last_region.h1 - self.MOVE_VERTICAL_BETWEEN_FRAMES
         else:
             h1 = last_region.h1
         temp = target_region.w1 - last_region.w1
-        if temp > self.MOVE_HORIZONTAL_BETWEEN_FRAMES:
+        if temp > self.MINIMAL_HORIZONTAL_DIFFERENCE_FOR_MOVEMENT:
             w1 = last_region.w1 + self.MOVE_HORIZONTAL_BETWEEN_FRAMES
-        elif abs(temp) > self.MOVE_HORIZONTAL_BETWEEN_FRAMES:
+        elif abs(temp) > self.MINIMAL_HORIZONTAL_DIFFERENCE_FOR_MOVEMENT:
             w1 = last_region.w1 - self.MOVE_HORIZONTAL_BETWEEN_FRAMES
         else:
             w1 = last_region.w1
@@ -175,7 +176,7 @@ class VideoController(object):
     def calculate_for_all(self):
         count = 0
         a = os.getcwd()
-        exp_video = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'MJPG'), 60, (self.targetheight, self.targetwidth), False)
+        exp_video = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'MJPG'), 60, (self.targetwidth, self.targetheight), False)
         # small_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'small', self.targetheight, self.targetwidth)
         last_region = None
         succes = True
@@ -183,25 +184,22 @@ class VideoController(object):
             succes, frame = self.cap.read()
             if succes:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                cv2.imshow('org', frame)
                 sal_frame_small = getSaliency(frame)
                 sal_frame_small = self.calculate_threshold(sal_frame_small)
                 target_region = self.find_most_salient_region(sal_frame_small, frame.shape[0], frame.shape[1])
 
-                final_region = self.calculate_final_region(target_region, last_region)
+                final_region = self.calculate_final_region(target_region, self.last_region)
                 final_output_frame = self.cut_by_region(frame, final_region)
-                last_region = final_region
-                # cv2.imshow('final', self.cut_by_region(frame, final_region))
+                self.last_region = final_region
+                cv2.imshow('final', self.cut_by_region(frame, final_region))
                 # small_video.addframe(final_output_frame)
                 exp_video.write(final_output_frame)
-                # cv2.waitKey(1)
+                cv2.waitKey(1)
                 # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.png'), final_output_frame)
                 count += 1
                 if count % 60 is 0:
                     print('finished second ' + str(count//60) + ' of ' + str(self.frame_amount//60))
-            # big_video.addframe(frame)
-            # self.blob_analysis(frame)
-            # region = self.find_most_salient_region(frame)
-            # small_video.addframe(frame[region.h1:region.h2+1, region.w1:region.w2+1])
 
         # for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
         exp_video.release()
