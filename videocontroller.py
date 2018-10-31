@@ -184,17 +184,16 @@ class VideoController(object):
             if succes:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 sal_frame_small = getSaliency(frame)
-                cv2.imshow('sal', sal_frame_small)
                 sal_frame_small = self.calculate_threshold(sal_frame_small)
                 target_region = self.find_most_salient_region(sal_frame_small, frame.shape[0], frame.shape[1])
 
                 final_region = self.calculate_final_region(target_region, last_region)
                 final_output_frame = self.cut_by_region(frame, final_region)
                 last_region = final_region
-                cv2.imshow('final', self.cut_by_region(frame, final_region))
+                # cv2.imshow('final', self.cut_by_region(frame, final_region))
                 # small_video.addframe(final_output_frame)
                 exp_video.write(final_output_frame)
-                cv2.waitKey(1)
+                # cv2.waitKey(1)
                 # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.png'), final_output_frame)
                 count += 1
                 if count % 60 is 0:
