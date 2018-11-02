@@ -176,15 +176,15 @@ class VideoController(object):
     def calculate_for_all(self):
         count = 0
         a = os.getcwd()
-        exp_video = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'MJPG'), 60, (self.targetwidth, self.targetheight), False)
-        # small_video = VideoWriter(os.path.join(os.getcwd(), 'multimedia_labo_3'), 'small', self.targetheight, self.targetwidth)
+        framerate = self.cap.get(cv2.CAP_PROP_FPS)
+        exp_video = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'MJPG'), framerate, (self.targetwidth, self.targetheight), False)
         last_region = None
         succes = True
         while succes:
             succes, frame = self.cap.read()
             if succes:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('org', frame)
+                # cv2.imshow('org', frame)
                 sal_frame_small = getSaliency(frame)
                 sal_frame_small = self.calculate_threshold(sal_frame_small)
                 target_region = self.find_most_salient_region(sal_frame_small, frame.shape[0], frame.shape[1])
@@ -192,10 +192,9 @@ class VideoController(object):
                 final_region = self.calculate_final_region(target_region, self.last_region)
                 final_output_frame = self.cut_by_region(frame, final_region)
                 self.last_region = final_region
-                cv2.imshow('final', self.cut_by_region(frame, final_region))
-                # small_video.addframe(final_output_frame)
+                # cv2.imshow('final', self.cut_by_region(frame, final_region))
                 exp_video.write(final_output_frame)
-                cv2.waitKey(1)
+                # cv2.waitKey(1)
                 # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.png'), final_output_frame)
                 count += 1
                 if count % 60 is 0:
@@ -203,7 +202,6 @@ class VideoController(object):
 
         # for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
         exp_video.release()
-        # small_video.finish()
 
     def finish(self):
         self.cap.release()
