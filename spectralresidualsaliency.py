@@ -17,7 +17,19 @@ def showPlot(frame):
     maxFrame = np.max(frame)
     plt.hist(frame.ravel(),  12, [0, maxFrame]); plt.show()
 
+
 def getSaliency(img):
+    return cv2Methode(img)
+
+def cv2Methode(img):
+    saliency = cv2.saliency.StaticSaliencySpectralResidual_create()
+    (success, saliencyMap) = saliency.computeSaliency(img)
+    saliencyMap = (saliencyMap * 255).astype("uint8")
+    # cv2.imshow("Image", img)
+    # cv2.imshow("Output", saliencyMap)
+    return saliencyMap
+
+def residualMethode(img):
     # cv2.imshow('original', img)
     width=img.shape[0]
     height=img.shape[1]
@@ -44,12 +56,17 @@ def getSaliency(img):
     # img = np.concatenate((img, sm), axis=1)
     # cv2.imshow("sm", np.concatenate((img, sm), axis=1))
 
+    # cv2.imshow('result',sm)
     # while(True):
     #     if cv2.waitKey(1) & 0xFF == ord('q'):
     #         break
     #
     # cv2.destroyAllWindows()
+
     return sm
+
+# def residualMethode2(img):
+
 # test function
 
 # image = cv2.imread(str(sys.argv[1]), 0)

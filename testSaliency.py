@@ -3,17 +3,19 @@ import cv2
 import sys
 import numpy as np
 
-for x in range(1,5):
+for x in range(1,6):
     image = cv2.imread(str(sys.argv[x]))
 
     # cv2.imshow("test",image)
-    width=image.shape[0]
-    height=image.shape[1]
+    width=len(image[0])
+    height=len(image)
     newWidth = 400
-    newHeight = height*(newWidth/width)
-    image = cv2.resize(image, (newWidth, int(newHeight)))
-    cv2.imshow('x', np.concatenate((image, getSaliency(image)), axis=1))
+    newHeight = int(height*(newWidth/width))
+    salImage = getSaliency(image)
+    salImage = cv2.resize(salImage, (newWidth, newHeight))
+    image = cv2.resize(np.abs(image), (len(salImage[0]), len(salImage)))
+    cv2.imshow("saliency",salImage)
+    cv2.imshow('result', np.concatenate((image, salImage), axis=1))
     while True:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-

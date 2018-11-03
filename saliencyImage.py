@@ -15,7 +15,7 @@ def kernel(n):
 
 def showPlot(frame):
     max = np.max(frame)
-    plt.hist(frame.ravel(),  12, [0, frame]); plt.show()
+    # plt.hist(frame.ravel(),  12, [0, frame]); plt.show()
 
 orgimg_list = []
 for i in range(1, 2):
@@ -33,36 +33,33 @@ frame = cv2.resize(frame, (64, 64), interpolation=cv2.INTER_CUBIC)
 showPlot(np.zeros((5, 5)))
 
 imageFourier = np.fft.fft2(frame)
-logImageFourier = np.log(imageFourier)
-phase = np.angle(imageFourier)
 
 # show imageFourier
-showPlot(logImageFourier)
-cv2.imshow('fourier', np.abs(logImageFourier))
+showPlot(imageFourier)
+cv2.imshow('fourier', np.abs(imageFourier))
 
 # we now have the spectrum analyse
 # wich needs to be logaritmic:
 imageConvolve = convolutions.convolve(frame, np.abs(kernel(9)))
 fourierConvolve = np.fft.fft2(imageConvolve)
-logFourierConvolve = np.log(fourierConvolve)
 showPlot(fourierConvolve)
 cv2.imshow('averagedSpectrum', np.abs(fourierConvolve))
 
 
 # averagedSpectrum = np.multiply(imageConvolve, logSpectrum)
 # showPlot(averagedSpectrum)
-phase = np.angle(imageFourier)
-spectralResidual = np.subtract(logFourierConvolve, logImageFourier)
-spectralResidual = np.exp(spectralResidual+1j*phase)**2
+spectralResidual = np.subtract(fourierConvolve, imageFourier)
 showPlot(spectralResidual)
 saliencyImage = np.fft.ifft2(spectralResidual)
 showPlot(saliencyImage)
 max = np.max(saliencyImage)
-saliencyImage = np.asarray(saliencyImage*255/max, dtype=np.uint8)
-cv2.filter2D(saliencyImage,-1,kernel(9))
-newSaliencyImage = cv2.resize(np.abs(saliencyImage), (widthFrame, heightFrame))
-frame = cv2.resize(frame,(widthFrame,heightFrame))
-cv2.imshow('saliency', np.concatenate((frame, np.abs(newSaliencyImage)), axis=1))
+saliencyImage = cv2.resize(np.abs(saliencyImage), (widthFrame, heightFrame))
+cv2.imshow('saliency', saliencyImage)
+#saliencyImage = np.asarray(saliencyImage*255/max, dtype=np.uint8)
+#cv2.filter2D(saliencyImage,-1,kernel(9))
+#newSaliencyImage = cv2.resize(np.abs(saliencyImage), (widthFrame, heightFrame))
+#frame = cv2.resize(frame,(widthFrame,heightFrame))
+#cv2.imshow('newSaliency', np.concatenate((frame, np.abs(newSaliencyImage)), axis=1))
 
 while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
