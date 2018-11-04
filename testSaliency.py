@@ -15,7 +15,6 @@ for x in range(1,6):
     salImage = cv2.resize(salImage, (newWidth, newHeight))
     image = cv2.resize(np.abs(image), (len(salImage[0]), len(salImage)))
     cv2.imshow("saliency",salImage)
-    cv2.imshow('result', np.concatenate((image, salImage), axis=1))
     while True:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

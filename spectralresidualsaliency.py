@@ -4,19 +4,8 @@ import cv2
 import convolutions
 import numpy as np
 from matplotlib import pyplot as plt
-
-
-
-def kernel(n):
-    factor = 1/pow(n, 2)
-    kernelArray = np.full((n, n), factor)
-    # print(kernelArray)
-    return kernelArray
-
-def showPlot(frame):
-    maxFrame = np.max(frame)
-    plt.hist(frame.ravel(),  12, [0, maxFrame]); plt.show()
-
+from saliencyImage import kernel
+from saliencyImage import getSaliencyFrame
 
 def getSaliency(img):
     return cv2Methode(img)
@@ -25,53 +14,25 @@ def cv2Methode(img):
     saliency = cv2.saliency.StaticSaliencySpectralResidual_create()
     (success, saliencyMap) = saliency.computeSaliency(img)
     saliencyMap = (saliencyMap * 255).astype("uint8")
-    # cv2.imshow("Image", img)
-    # cv2.imshow("Output", saliencyMap)
     return saliencyMap
 
+# reformed version from minerva
 def residualMethode(img):
-    # cv2.imshow('original', img)
     width=img.shape[0]
     height=img.shape[1]
-
-    img = cv2.resize(img, (128, 128))
-    # cv2.imshow("img", img)
-
-    kernl = kernel(9)
-
+    img = cv2.resize(img, (64, 64))
+    kernl = kernel(5)
     f = np.fft.fft2(img)
     logamp = np.log(np.abs(f))
     phase = np.angle(f)
-
     sr = logamp - cv2.filter2D(logamp, -1, kernl)
-    # showPlot(sr)
-    # print(np.abs(np.fft.ifft2(np.exp(sr + 1j*phase))))
     sm = np.abs(np.fft.ifft2(np.exp(sr + 1j*phase)))**2
-
     msm = np.max(sm)
     sm = np.asarray(sm*255/msm, dtype=np.uint8)
     cv2.filter2D(sm, -1, kernl)
-    # sm = cv2.resize(sm, (height, width))
-    # img = cv2.resize(img, (height, width))
-    # img = np.concatenate((img, sm), axis=1)
-    # cv2.imshow("sm", np.concatenate((img, sm), axis=1))
-
-    # cv2.imshow('result',sm)
-    # while(True):
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
-    #
-    # cv2.destroyAllWindows()
 
     return sm
 
-# def residualMethode2(img):
-
-# test function
-
-# image = cv2.imread(str(sys.argv[1]), 0)
-# image = getSaliency(image)
-# cv2.imshow('dd', image)
-# while True:
-#     if cv2.waitKey(1) & 0xFF == ord('q'):
-#         break
+# method based of a paper
+def residualMethode2(img):
+    return getSaliencyFrame(img)
