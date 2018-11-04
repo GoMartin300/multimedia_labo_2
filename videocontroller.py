@@ -159,10 +159,9 @@ class VideoController(object):
     """
     calculates the final frame that needs to be displayed, this means it makes sure the tranisition is smooth
     """
-    def calculate_final_region(self, target_region, last_region):
+    def calculate_final_region(self, target_region, last_region, org_height, org_width):
         if last_region is None:
             return target_region
-
         temp = target_region.h1 - last_region.h1
         if temp > self.MINIMAL_VERTICAL_DIFFERENCE_FOR_MOVEMENT:
             h1 = last_region.h1 + self.MOVE_VERTICAL_BETWEEN_FRAMES
@@ -177,7 +176,32 @@ class VideoController(object):
             w1 = last_region.w1 - self.MOVE_HORIZONTAL_BETWEEN_FRAMES
         else:
             w1 = last_region.w1
-        return Region(w1=w1, h1=h1, w2=w1 + self.targetwidth - 1, h2=h1 + self.targetheight - 1)
+
+        w2 = w1 + self.sub_region_width
+        h2 = h1 + self.sub_region_height
+        self.skipzoom = self.skipzoom + 1
+        if self.skipzoom >= self.SKIP_ZOOM_CHANGE_BETWEEN_FRAMES:
+            self.skipzoom = 0
+
+            last_region_width = last_region.w2 - last_region.w1
+            last_region_height = last_region.h2 - last_region.h1
+            if (target_region.w2 - target_region.w1) - last_region_width > self.original_ratio.numerator:
+                if w2 + self.original_ratio.numerator < org_width:
+                    w2 = w2 + self.original_ratio.numerator
+                elif w1 - self.original_ratio.numerator > 0:
+                    w1 = w1 - self.original_ratio.numerator
+
+                if h2 + self.original_ratio.denominator < org_height:
+                    h2 = h2 + self.original_ratio.denominator
+                elif h1 - self.original_ratio.denominator > 0:
+                    h1 = h1 - self.original_ratio.denominator
+            elif last_region_width - (target_region.w2 - target_region.w1) > self.original_ratio.numerator:
+                w2 = w2 - self.original_ratio.numerator
+                h2 = h2 - self.original_ratio.denominator
+
+            self.sub_region_height = h2 - h1
+            self.sub_region_width = w2 - w1
+        return Region(w1=w1, h1=h1, w2=w2, h2=h2)
 
     # def get_region_blob(self,keypoints):
     #     im = cv2.drawKeypoints(keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -239,6 +263,39 @@ class VideoController(object):
         # cv2.waitKey(0)
         # return self.get_region_blob(keypoints)
 
+    # def calculate_for_all(self):
+    #     count = 0
+    #     a = os.getcwd()
+    #     framerate = self.cap.get(cv2.CAP_PROP_FPS)
+    #     exp_video = cv2.VideoWriter('video.avi', cv2.VideoWriter.fourcc(*'MJPG'), framerate, (self.targetwidth, self.targetheight), False)
+    #     last_region = None
+    #     succes = True
+    #     while succes:
+    #         succes, frame = self.cap.read()
+    #         if succes:
+    #             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    #             # cv2.imshow('org', frame)
+    #             sal_frame_small = getSaliency(frame)
+    #             # cv2.imshow('sal', sal_frame_small)
+    #             sal_frame_small = self.calculate_threshold(sal_frame_small)
+    #
+    #             cv2.imshow('thress', sal_frame_small)
+    #             target_region = self.find_most_salient_region(sal_frame_small, frame.shape[0], frame.shape[1])
+    #
+    #             final_region = self.calculate_final_region(target_region, self.last_region)
+    #             final_output_frame = self.cut_by_region(frame, final_region)
+    #             self.last_region = final_region
+    #             # cv2.imshow('final', self.cut_by_region(frame, final_region))
+    #             exp_video.write(final_output_frame)
+    #             # cv2.waitKey(1)
+    #             # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.png'), final_output_frame)
+    #             count += 1
+    #             if count % 60 is 0:
+    #                 print('finished second ' + str(count//60) + ' of ' + str(self.frame_amount//60))
+    #
+    #     # for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
+    #     exp_video.release()
+
     def calculate_for_all(self):
         count = 0
         a = os.getcwd()
@@ -250,17 +307,14 @@ class VideoController(object):
             succes, frame = self.cap.read()
             if succes:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # cv2.imshow('org', frame)
                 sal_frame_small = getSaliency(frame)
-                sal_frame_small = self.calculate_threshold(sal_frame_small)
-                target_region = self.find_most_salient_region(sal_frame_small, frame.shape[0], frame.shape[1])
-
-                final_region = self.calculate_final_region(target_region, self.last_region)
-                final_output_frame = self.cut_by_region(frame, final_region)
+                threshold_image = self.calculate_threshold(sal_frame_small)
+                bounding_rect = self.calculate_bounding_rectangle(threshold_image)
+                target_region = self.fix_bounding_box_scale(bounding_rect, frame.shape[0], frame.shape[1])
+                final_region = self.calculate_final_region(target_region, self.last_region, frame.shape[0], frame.shape[1])
+                final_output_frame = cv2.resize(self.cut_by_region(frame, final_region), (self.targetwidth, self.targetheight))
                 self.last_region = final_region
-                # cv2.imshow('final', self.cut_by_region(frame, final_region))
                 exp_video.write(final_output_frame)
-                # cv2.waitKey(1)
                 count += 1
                 if count % 60 is 0:
                     print('finished second ' + str(count//60) + ' of ' + str(self.frame_amount//60))
