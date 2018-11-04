@@ -25,7 +25,7 @@ class VideoController(object):
     sub_region_height = None
 
     def __init__(self, sys_argv):
-        self.SKIP_ZOOM_AMOUNT_OF_FRAMES = None
+        self.SKIP_ZOOM_AMOUNT_OF_FRAMES = 1
 
 
         self.targetheight = int(sys_argv[2])
@@ -106,7 +106,7 @@ class VideoController(object):
             h_box = self.targetheight
 
         if w_box < self.targetwidth:
-            w1 = w1 - (self.targetwidth - w_box)//2
+            w1 = w1 + (w_box - self.targetheight)//2
             if w1 < 0:
                 w1 = 0
             if w1 + self.targetwidth > org_frame_width:
@@ -117,20 +117,20 @@ class VideoController(object):
         if i_box_ratio == self.original_ratio.numerator/self.original_ratio.denominator:
             region = Region(h1=h1, w1=w1, h2=h1 + h_box, w2=w1 + w_box)
         elif i_box_ratio < (org_frame_width/org_frame_heigth):
-            region = self.fix_horizontal_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
-        else:
             region = self.fix_vertical_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
-        if region.h2 >= self.targetheight:
-            region.h2 = self.targetheight - 1
-        if region.w2 >= self.targetwidth:
-            region.w2 = self.targetwidth - 1
+        else:
+            region = self.fix_horizontal_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
+        if region.h2 >= org_frame_heigth:
+            region.h2 = org_frame_heigth - 1
+        if region.w2 >= org_frame_width:
+            region.w2 = org_frame_width - 1
         return region
 
     def fix_vertical_ratio(self, w1, h1, w_box, h_box, org_frame_heigth, org_frame_width):
         h_box_round = h_box // self.original_ratio.denominator * self.original_ratio.denominator
-
         if h_box_round < h_box:
             h_box_round = h_box_round + self.original_ratio.denominator
+
         w_round = (h_box_round * self.original_ratio.numerator) // self.original_ratio.denominator
 
         if h_box_round + h1 > org_frame_heigth:
@@ -138,31 +138,35 @@ class VideoController(object):
         h2 = h1 + h_box_round
 
         w_added = w_round - w_box
-        w1_temp = w1 - w_added // 2
-        if w1_temp < 0:
-            w_added = w_added - w1 - 1
-            w1 = 0
-            w2 = w1 + w_round
+        if w_added >= 0:
+            w1_temp = w1 - w_added // 2
+            if w1_temp < 0:
+                w_added = w_added - w1 - 1
+                w1 = 0
+                w2 = w1 + w_round
+            else:
+                w1 = w1_temp
+                w2_temp = w1 + w_round
+                if w2_temp >= org_frame_width:
+                    excess = w2_temp - org_frame_width + 1
+                    w1 = w1 - excess
+                    if w1 < 0:
+                        w1 = 0
+                        w_box = org_frame_width
+                        h1 = h1 + h_box//2
+                        h_box = 1
+                        return self.fix_vertical_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
+                w2 = w1 + w_round
         else:
-            w1 = w1_temp
-            w2_temp = w1 + w_round
-            if w2_temp >= org_frame_width:
-                excess = w2_temp - org_frame_width + 1
-                w1 = w1 - excess
-                if w1 < 0:
-                    w1 = 0
-                    w_box = org_frame_width
-                    h1 = h1 + h_box//2
-                    h_box = 1
-                    return self.fix_horizontal_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
+            w1 = w1 + abs(w_added)//2
             w2 = w1 + w_round
         return Region(w1=w1, h1=h1, w2=w2, h2=h2)
 
     def fix_horizontal_ratio(self, w1, h1, w_box, h_box, org_frame_heigth, org_frame_width):
         w_box_round = w_box // self.original_ratio.numerator * self.original_ratio.numerator
-
         if w_box_round < w_box:
             w_box_round = w_box_round + self.original_ratio.numerator
+
         h_round = (w_box_round * self.original_ratio.denominator) // self.original_ratio.numerator
 
         if w_box_round + w1 > org_frame_width:
@@ -170,23 +174,27 @@ class VideoController(object):
         w2 = w1 + w_box_round
 
         h_added = h_round - h_box
-        h1_temp = h1 - h_added // 2
-        if h1_temp < 0:
-            h_added = h_added - h1 - 1
-            h1=0
-            h2 = h1 + h_round
+        if h_added >=0:
+            h1_temp = h1 - h_added // 2
+            if h1_temp < 0:
+                h_added = h_added - h1 - 1
+                h1 = 0
+                h2 = h1 + h_round
+            else:
+                h1 = h1_temp
+                h2_temp = h1 + h_round
+                if h2_temp >= org_frame_heigth:
+                    excess = h2_temp - org_frame_heigth + 1
+                    h1 = h1 - excess
+                    if h1 < 0:
+                        h1 = 0
+                        h_box = org_frame_heigth
+                        w1 = w1 + w_box//2
+                        w_box = 1
+                        return self.fix_vertical_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
+                h2 = h1 + h_round
         else:
-            h1 = h1_temp
-            h2_temp = h1 + h_round
-            if h2_temp >= org_frame_heigth:
-                excess = h2_temp - org_frame_heigth + 1
-                h1 = h1 - excess
-                if h1 < 0:
-                    h1 = 0
-                    h_box = org_frame_heigth
-                    w1 = w1 + w_box//2
-                    w_box = 1
-                    return self.fix_vertical_ratio(w1, h1, w_box, h_box, org_frame_heigth, org_frame_width)
+            h1 = h1 + abs(h_added) // 2
             h2 = h1 + h_round
         return Region(w1=w1, h1=h1, w2=w2, h2=h2)
 
@@ -221,8 +229,8 @@ class VideoController(object):
         h2 = h1 + self.sub_region_height
         self.skipzoom = self.skipzoom + 1
         if self.SKIP_ZOOM_AMOUNT_OF_FRAMES is None:
-            max = max(self.original_ratio.numerator, self.original_ratio.denominator)
-            self.SKIP_ZOOM_AMOUNT_OF_FRAMES = max//4
+            max_value = max(self.original_ratio.numerator, self.original_ratio.denominator)
+            self.SKIP_ZOOM_AMOUNT_OF_FRAMES = max_value//4
         if self.skipzoom >= self.SKIP_ZOOM_AMOUNT_OF_FRAMES:
             self.skipzoom = 0
 
@@ -256,13 +264,12 @@ class VideoController(object):
         while succes:
             succes, frame = self.cap.read()
             if succes:
-                if self.count == 17:
-                    a = 2+2
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 sal_frame_small = getSaliency(frame)
                 threshold_image = self.calculate_threshold(sal_frame_small)
                 bounding_rect = self.calculate_bounding_rectangle(threshold_image)
                 target_region = self.fix_bounding_box_scale(bounding_rect, frame.shape[0], frame.shape[1])
+                cv2.imshow('blbla',self.cut_by_region(frame, target_region))
                 final_region = self.calculate_final_region(target_region, self.last_region, frame.shape[0], frame.shape[1])
                 final_raw_frame = self.cut_by_region(frame, final_region)
                 final_output_frame = cv2.resize(final_raw_frame, (self.targetwidth, self.targetheight))
@@ -271,6 +278,8 @@ class VideoController(object):
                 cv2.waitKey(1)
                 exp_video.write(final_output_frame)
                 self.count += 1
+                if self.count == 180:
+                    a = 2 + 2
                 if self.count % 60 is 0:
                     print('finished second ' + str(self.count//60) + ' of ' + str(self.frame_amount//60))
         exp_video.release()
