@@ -20,7 +20,3 @@ class VideoWriter(object):
 
     def finish(self):
         self.cv2videowriter.release()
-
-
-
-

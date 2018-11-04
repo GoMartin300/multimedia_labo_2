@@ -5,7 +5,7 @@ import os
 from region import Region
 from VideoWriter import VideoWriter
 from spectralresidualsaliency import getSaliency
-
+from fractions import Fraction
 
 class VideoController(object):
     MINIMAL_HORIZONTAL_DIFFERENCE_FOR_MOVEMENT = 30
@@ -13,6 +13,7 @@ class VideoController(object):
     MOVE_HORIZONTAL_BETWEEN_FRAMES = 5
     MOVE_VERTICAL_BETWEEN_FRAMES = 3
 
+    SKIP_ZOOM_CHANGE_BETWEEN_FRAMES = 4
     original_video_path = None
     cap = None
     orgtempdir = None
@@ -20,72 +21,137 @@ class VideoController(object):
     targetwidth = None
     last_region = None
 
+    sub_region_width = None
+    sub_region_height = None
+
+
     def __init__(self, sys_argv):
         self.targetheight = int(sys_argv[2])
         self.targetwidth = int(sys_argv[3])
-
+        self.sub_region_height = self.targetheight
+        self.sub_region_width = self.targetwidth
         self.original_video_path = str(sys_argv[1])
         self.cap = cv2.VideoCapture(self.original_video_path)
         self.frame_amount = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.original_ratio = None
 
+        self.skipzoom = 0
     def calculate_threshold(self, saliency_image):
         # return cv2.adaptiveThreshold(saliency_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 101, 2)
-        ret, thresh = cv2.threshold(saliency_image, np.mean(saliency_image), 255, cv2.THRESH_BINARY)
+        # ret, thresh = cv2.threshold(saliency_image, np.mean(saliency_image), 255, cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(saliency_image, np.percentile(saliency_image, 80), 255, cv2.THRESH_BINARY)
         return thresh
 
-    def find_most_salient_region_temp(self, sal_frame):
-        org_height = sal_frame.shape[0]
-        org_width = sal_frame.shape[1]
-        best_value = 0
-        summed_area_matrix = np.cumsum(np.cumsum(sal_frame, axis=1, dtype='uint64'), axis=0, dtype='uint64')
-        for h in range(0, org_height - self.targetheight):
-            for w in range(0, org_width - self.targetwidth):
-                A = summed_area_matrix[h][w]
-                B = summed_area_matrix[h][w + self.targetwidth]
-                C = summed_area_matrix[h + self.targetheight][w]
-                D = summed_area_matrix[h + self.targetheight][w + self.targetwidth]
-                value = D - B + A - C
-                if best_value < value:
-                    best_value = value
-                    best_region = Region(h1=h, h2=h + self.targetheight, w1=w, w2=w + self.targetwidth)
-        return best_region
 
-    def find_most_salient_region(self, sal_frame, original_height, original_width):
-        sal_height = sal_frame.shape[0]
-        sal_width = sal_frame.shape[1]
-        scaling_factor_h = original_height/sal_height
-        scaling_factor_w = original_width/sal_width
-        scaled_targetheight = round(self.targetheight//scaling_factor_h)
-        scaled_targetwidth = round(self.targetwidth//scaling_factor_w)
-        best_value = 0
-        summed_area_matrix = np.cumsum(np.cumsum(sal_frame, axis=1, dtype='uint64'), axis=0, dtype='uint64')
-        for h in range(0, sal_height - scaled_targetheight):
-            for w in range(0, sal_width - scaled_targetwidth):
-                A = summed_area_matrix[h][w]
-                B = summed_area_matrix[h][w + scaled_targetwidth]
-                C = summed_area_matrix[h + scaled_targetheight][w]
-                D = summed_area_matrix[h + scaled_targetheight][w + scaled_targetwidth]
-                value = D - B + A - C
-                if best_value < value:
-                    best_value = value
-                    best_region = Region(h1=h, h2=h + scaled_targetheight, w1=w, w2=w + scaled_targetwidth)
-        if best_value is 0:
-            return self.last_region
-        h1 = round(best_region.h1 * scaling_factor_h)
-        w1 = round(best_region.w1 * scaling_factor_w)
-        if h1 < 0:
-            h1 = 0
+    def calculate_bounding_rectangle(self, threshold_image):
+        im, contours, hierarchy = cv2.findContours(threshold_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=cv2.contourArea)
+        if contours.__len__() is not 0:
+            rect = cv2.boundingRect((contours[-1]))
+            return rect
         else:
-            temp = h1 + self.targetheight - original_height
-            if temp > 0:
-                h1 = h1 - temp
-        if w1 < 0:
-            w1 = 0
+            return [self.last_region.w1, self.last_region.h1, self.last_region.w2-self.last_region.w1, self.last_region.h2 - self.last_region.h1]
+
+    # def shape_to_region(self, shape):
+    #      return Region(w1=shape[0], h1=shape[1], w2=shape[0] + shape[2],
+    #                      h2=shape[1] + shape[3])
+
+    # def find_most_salient_region(self, sal_frame, original_height, original_width):
+    #     sal_frame = cv2.resize(sal_frame, (128, 128))
+    #     sal_height = sal_frame.shape[0]
+    #     sal_width = sal_frame.shape[1]
+    #     scaling_factor_h = original_height/sal_height
+    #     scaling_factor_w = original_width/sal_width
+    #     scaled_targetheight = round(self.targetheight//scaling_factor_h)
+    #     scaled_targetwidth = round(self.targetwidth//scaling_factor_w)
+    #     best_value = 0
+    #     summed_area_matrix = np.cumsum(np.cumsum(sal_frame, axis=1, dtype='uint64'), axis=0, dtype='uint64')
+    #     for h in range(0, sal_height - scaled_targetheight):
+    #         for w in range(0, sal_width - scaled_targetwidth):
+    #             A = summed_area_matrix[h][w]
+    #             B = summed_area_matrix[h][w + scaled_targetwidth]
+    #             C = summed_area_matrix[h + scaled_targetheight][w]
+    #             D = summed_area_matrix[h + scaled_targetheight][w + scaled_targetwidth]
+    #             value = D - B + A - C
+    #             if best_value < value:
+    #                 best_value = value
+    #                 best_region = Region(h1=h, h2=h + scaled_targetheight, w1=w, w2=w + scaled_targetwidth)
+    #     if best_value is 0:
+    #         return self.last_region
+    #     h1 = round(best_region.h1 * scaling_factor_h)
+    #     w1 = round(best_region.w1 * scaling_factor_w)
+    #     if h1 < 0:
+    #         h1 = 0
+    #     else:
+    #         temp = h1 + self.targetheight - original_height
+    #         if temp > 0:
+    #             h1 = h1 - temp
+    #     if w1 < 0:
+    #         w1 = 0
+    #     else:
+    #         temp = w1 + self.targetwidth - original_width
+    #         if temp > 0:
+    #             w1 = w1 - temp
+    #     return Region(w1, h1, w1 + self.targetwidth - 1, h1 + self.targetheight - 1)
+
+    def fix_bounding_box_scale(self, i_box, org_frame_heigth, org_frame_width):
+        self.original_ratio = Fraction(org_frame_width, org_frame_heigth)
+        h1 = i_box[1]
+        w1 = i_box[0]
+        h_box = i_box[3]
+        w_box = i_box[2]
+        i_box_ratio = w_box/h_box
+        if i_box_ratio == self.original_ratio.numerator/self.original_ratio.denominator:
+            return i_box
+        if i_box_ratio < (org_frame_width/org_frame_heigth):        #this means height is too big
+            h_box_round = h_box//self.original_ratio.denominator * self.original_ratio.denominator
+
+            if h_box_round < h_box:
+                h_box_round = h_box_round + self.original_ratio.denominator
+            w_round = (h_box_round * self.original_ratio.numerator)//self.original_ratio.denominator
+
+            if h_box_round + h1 > org_frame_heigth:
+                h_box_round = h_box_round - self.original_ratio.denominator
+            h2 = h1 + h_box_round
+            w_added = w_round - w_box
+            w1_temp = w1 - w_added//2
+            if w1_temp < 0:
+                w1 = 0
+                w_added = w_added - w1 - 1
+                w2 = w1 + w_round
+            else:
+                w1 = w1_temp
+                w2_temp = w1 + w_round
+                if w2_temp >= org_frame_width:
+                    excess = w2_temp - org_frame_width
+                    w1 = w1 - excess
+                w2 = w1 + w_round
+
         else:
-            temp = w1 + self.targetwidth - original_width
-            if temp > 0:
-                w1 = w1 - temp
-        return Region(w1, h1, w1 + self.targetwidth - 1, h1 + self.targetheight - 1)
+            w_box_round = w_box//self.original_ratio.numerator * self.original_ratio.numerator
+
+            if w_box_round < w_box:
+                w_box_round = w_box_round + self.original_ratio.numerator
+            h_round = (w_box_round * self.original_ratio.denominator)//self.original_ratio.numerator
+
+            if w_box_round + w1 > org_frame_width:
+                w_box_round = w_box_round - self.original_ratio.numerator
+            w2 = w1 + w_box_round
+            h_added = h_round - h_box
+            h1_temp = h1 - h_added // 2
+            if h1_temp < 0:
+                h1 = 0
+                h_added = h_added - h1 - 1
+                h2 = h1 + h_round
+            else:
+                h1 = h1_temp
+                h2_temp = h1 + h_round
+                if h2_temp >= org_frame_heigth:
+                    excess = h2_temp - org_frame_heigth
+                    h1 = h1 - excess
+                h2 = h1 + h_round
+
+        return Region(w1 = w1, h1 = h1, w2=w2, h2 = h2)
 
     def cut_by_region(self, frame, region):
         return frame[region.h1:region.h2 + 1, region.w1:region.w2 + 1]
@@ -195,16 +261,11 @@ class VideoController(object):
                 # cv2.imshow('final', self.cut_by_region(frame, final_region))
                 exp_video.write(final_output_frame)
                 # cv2.waitKey(1)
-                # cv2.imwrite(os.path.join(self.saltempdir.name, str(count) + '.png'), final_output_frame)
                 count += 1
                 if count % 60 is 0:
                     print('finished second ' + str(count//60) + ' of ' + str(self.frame_amount//60))
-
-        # for picture in os.listdir(os.fsencode(self.orgtempdir.name)):
         exp_video.release()
+
 
     def finish(self):
         self.cap.release()
-
-    # def prefered_region(self):
-        # When you crop the image to a preferred width & height
