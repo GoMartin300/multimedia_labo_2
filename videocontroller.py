@@ -269,17 +269,12 @@ class VideoController(object):
                 threshold_image = self.calculate_threshold(sal_frame_small)
                 bounding_rect = self.calculate_bounding_rectangle(threshold_image)
                 target_region = self.fix_bounding_box_scale(bounding_rect, frame.shape[0], frame.shape[1])
-                cv2.imshow('blbla',self.cut_by_region(frame, target_region))
                 final_region = self.calculate_final_region(target_region, self.last_region, frame.shape[0], frame.shape[1])
                 final_raw_frame = self.cut_by_region(frame, final_region)
                 final_output_frame = cv2.resize(final_raw_frame, (self.targetwidth, self.targetheight))
                 self.last_region = final_region
-                cv2.imshow('', final_output_frame)
-                cv2.waitKey(1)
                 exp_video.write(final_output_frame)
                 self.count += 1
-                if self.count == 180:
-                    a = 2 + 2
                 if self.count % 60 is 0:
                     print('finished second ' + str(self.count//60) + ' of ' + str(self.frame_amount//60))
         exp_video.release()
